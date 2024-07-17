@@ -1,0 +1,2 @@
+#!/bin/bash
+go build -o hack-assembler cmd/hack-assembler/main.go
