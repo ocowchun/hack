@@ -186,7 +186,7 @@ func buildPopWithSegmentPointer(label string, arg2 int64) []string {
 	res = append(res, "D=A")
 	res = append(res, fmt.Sprintf("@%s", label))
 	res = append(res, "D=D+M")
-	res = append(res, "@addr")
+	res = append(res, "@R13")
 	res = append(res, "M=D")
 
 	return res
@@ -197,6 +197,7 @@ const TempOffset = int64(5)
 func (w *Writer) translatePopCommand(arg1 string, arg2 int64) ([]string, error) {
 	res := make([]string, 0)
 	err := checkSegment(arg1)
+	// keep addr at R13
 	if err != nil {
 		return res, err
 	}
@@ -227,7 +228,7 @@ func (w *Writer) translatePopCommand(arg1 string, arg2 int64) ([]string, error) 
 		}
 		res = append(res, fmt.Sprintf("@%s", label))
 		res = append(res, "D=A")
-		res = append(res, "@addr")
+		res = append(res, "@R13")
 		res = append(res, "M=D")
 	}
 
@@ -235,16 +236,15 @@ func (w *Writer) translatePopCommand(arg1 string, arg2 int64) ([]string, error) 
 	if arg1 == "temp" {
 		res = append(res, fmt.Sprintf("@%d", TempOffset+arg2))
 		res = append(res, "D=A")
-		res = append(res, "@addr")
+		res = append(res, "@R13")
 		res = append(res, "M=D")
 	}
 
 	if arg1 == "static" {
 		res = append(res, fmt.Sprintf("@%s%d", w.fileName, arg2))
 		res = append(res, "D=A")
-		res = append(res, "@addr")
+		res = append(res, "@R13")
 		res = append(res, "M=D")
-
 	}
 
 	// sp--
@@ -254,7 +254,7 @@ func (w *Writer) translatePopCommand(arg1 string, arg2 int64) ([]string, error) 
 	res = append(res, "@SP")
 	res = append(res, "A=M")
 	res = append(res, "D=M")
-	res = append(res, "@addr")
+	res = append(res, "@R13")
 	res = append(res, "A=M")
 	res = append(res, "M=D")
 	return res, nil
@@ -286,7 +286,10 @@ func (w *Writer) translatePushCommand(arg1 string, arg2 int64) ([]string, error)
 	}
 
 	// static
-	// TODO
+	if arg1 == "static" {
+		res = append(res, fmt.Sprintf("@%s%d", w.fileName, arg2))
+		res = append(res, "D=M")
+	}
 
 	if arg1 == "temp" {
 		res = append(res, fmt.Sprintf("@%d", TempOffset+arg2))
