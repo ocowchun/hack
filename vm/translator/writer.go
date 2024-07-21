@@ -12,7 +12,10 @@ type Writer struct {
 
 func NewWriter(fileName string) *Writer {
 	processed := strings.Replace(fileName, ".vm", ".", 1)
-	return &Writer{fileName: processed}
+	return &Writer{
+		counter:  int64(0),
+		fileName: processed,
+	}
 }
 
 func (w *Writer) Write(command VmCommand) ([]string, error) {
@@ -27,9 +30,135 @@ func (w *Writer) Write(command VmCommand) ([]string, error) {
 		return make([]string, 0), nil
 	case C_BLANKLINE:
 		return make([]string, 0), nil
+	case C_LABEL:
+		return w.translateLabelCommand(command.Arg1())
+	case C_IF:
+		return w.translateIfCommand(command.Arg1())
+	case C_GOTO:
+		return w.translateGotoCommand(command.Arg1())
+	case C_FUNCTION:
+		return w.translateFunctionCommand(command.Arg1(), command.Arg2())
+	case C_RETURN:
+		return w.translateReturnCommand()
 	default:
 		return []string{}, fmt.Errorf("invalid command: %s", command)
 	}
+}
+func (w *Writer) translateFunctionCommand(functionName string, locals int64) ([]string, error) {
+	// function SimpleFunction.test 2
+	res := make([]string, 0)
+	res = append(res, fmt.Sprintf("(%s)", functionName))
+	count := int64(0)
+	for count < locals {
+		cmds, err := w.translatePushCommand("constant", 0)
+		if err != nil {
+			return res, err
+		}
+		res = append(res, cmds...)
+		count += 1
+	}
+
+	return res, nil
+}
+
+func (w *Writer) translateReturnCommand() ([]string, error) {
+	// return
+	res := make([]string, 0)
+	// R13 = endFrame, R14 = retAddress
+	// endFrame = LCL
+	res = append(res, "@LCL")
+	res = append(res, "D=M")
+	res = append(res, "@R13")
+	res = append(res, "M=D")
+	//retAddress =*(endFrame - 5)
+	res = append(res, "@5")
+	res = append(res, "A=D-A")
+	res = append(res, "D=M")
+	res = append(res, "@R14")
+	res = append(res, "M=D")
+	//*ARG = pop()
+	res = append(res, "@SP")
+	res = append(res, "AM=M-1")
+	res = append(res, "D=M")
+	res = append(res, "@ARG")
+	res = append(res, "A=M")
+	res = append(res, "M=D")
+	// SP = ARG + 1
+	res = append(res, "D=A+1")
+	res = append(res, "@SP")
+	res = append(res, "M=D")
+	// THAT =*(endFrame - 1)
+	res = append(res, "@R13")
+	res = append(res, "A=M-1")
+	res = append(res, "D=M")
+	res = append(res, "@THAT")
+	res = append(res, "M=D")
+	// THIS =*(endFrame - 2)
+	res = append(res, "@2")
+	res = append(res, "D=A")
+	res = append(res, "@R13")
+	res = append(res, "A=M-D")
+	res = append(res, "D=M")
+	res = append(res, "@THIS")
+	res = append(res, "M=D")
+	// ARG =*(endFrame - 3)
+	res = append(res, "@3")
+	res = append(res, "D=A")
+	res = append(res, "@R13")
+	res = append(res, "A=M-D")
+	res = append(res, "D=M")
+	res = append(res, "@ARG")
+	res = append(res, "M=D")
+	// LCL =*(endFrame - 4)
+	res = append(res, "@4")
+	res = append(res, "D=A")
+	res = append(res, "@R13")
+	res = append(res, "A=M-D")
+	res = append(res, "D=M")
+	res = append(res, "@LCL")
+	res = append(res, "M=D")
+	//goto retAddr
+	res = append(res, "@R14")
+	res = append(res, "A=M")
+	res = append(res, "0;JMP")
+	return res, nil
+}
+
+func (w *Writer) translateGotoCommand(label string) ([]string, error) {
+	// goto END                // otherwise, goto END
+	res := make([]string, 0)
+	l := computeLabelName(label)
+
+	res = append(res, fmt.Sprintf("@%s", l))
+	res = append(res, "0;JMP")
+
+	return res, nil
+}
+
+func (w *Writer) translateIfCommand(label string) ([]string, error) {
+	// if-goto LOOP        // if n > 0, goto LOOP
+	res := make([]string, 0)
+	l := computeLabelName(label)
+
+	res = append(res, "@SP")
+	res = append(res, "AM=M-1")
+	res = append(res, "D=M")
+	res = append(res, fmt.Sprintf("@%s", l))
+	res = append(res, "D;JGT")
+
+	return res, nil
+}
+
+func computeLabelName(label string) string {
+	return fmt.Sprintf("label_%s", label)
+}
+
+func (w *Writer) translateLabelCommand(label string) ([]string, error) {
+	res := make([]string, 0)
+	l := computeLabelName(label)
+	res = append(res, fmt.Sprintf("(%s)", l))
+
+	return res, nil
 }
 
 func (w *Writer) translateArithmeticCommand(command string) ([]string, error) {

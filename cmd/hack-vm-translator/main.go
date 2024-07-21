@@ -38,14 +38,4 @@ func main() {
 			fmt.Println(a)
 		}
 	}
-	//for parser.HasMoreCommands() {
-	//err = parser.Advance()
-	//err = parser.Advance()
-
-	//if err != nil {
-	//	log.Fatal(err)
-	//} else {
-	//	fmt.Println(parser.CurrentCommand())
-	//}
-	//}
 }

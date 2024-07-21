@@ -43,7 +43,9 @@ func (p *Parser) Advance() error {
 func parseCommand(line string) (VmCommand, error) {
 	tokens := make([]string, 0)
 
-	for _, token := range strings.Split(line, " ") {
+	processedLine := strings.Replace(line, "\t", " ", -1)
+
+	for _, token := range strings.Split(processedLine, " ") {
 		if token == "" {
 			continue
 		}
@@ -100,6 +102,24 @@ func parseCommand(line string) (VmCommand, error) {
 		return VmCommand{commandType: C_ARITHMETIC, arg1: "or", raw: line}, nil
 	case "not":
 		return VmCommand{commandType: C_ARITHMETIC, arg1: "not", raw: line}, nil
+	case "label":
+		arg1 := tokens[1]
+		return VmCommand{commandType: C_LABEL, arg1: arg1, raw: line}, nil
+	case "if-goto":
+		arg1 := tokens[1]
+		return VmCommand{commandType: C_IF, arg1: arg1, raw: line}, nil
+	case "goto":
+		arg1 := tokens[1]
+		return VmCommand{commandType: C_GOTO, arg1: arg1, raw: line}, nil
+	case "function":
+		arg1 := tokens[1]
+		arg2, err := strconv.ParseInt(tokens[2], 10, 64)
+		if err != nil {
+			return VmCommand{}, err
+		}
+		return VmCommand{commandType: C_FUNCTION, arg1: arg1, arg2: arg2, raw: line}, nil
+	case "return":
+		return VmCommand{commandType: C_RETURN, arg1: "return", raw: line}, nil
 	}
 
 	return VmCommand{}, fmt.Errorf("invalid line: %s", line)
