@@ -118,6 +118,13 @@ func parseCommand(line string) (VmCommand, error) {
 			return VmCommand{}, err
 		}
 		return VmCommand{commandType: C_FUNCTION, arg1: arg1, arg2: arg2, raw: line}, nil
+	case "call":
+		arg1 := tokens[1]
+		arg2, err := strconv.ParseInt(tokens[2], 10, 64)
+		if err != nil {
+			return VmCommand{}, err
+		}
+		return VmCommand{commandType: C_CALL, arg1: arg1, arg2: arg2, raw: line}, nil
 	case "return":
 		return VmCommand{commandType: C_RETURN, arg1: "return", raw: line}, nil
 	}

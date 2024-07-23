@@ -40,6 +40,8 @@ func (w *Writer) Write(command VmCommand) ([]string, error) {
 		return w.translateFunctionCommand(command.Arg1(), command.Arg2())
 	case C_RETURN:
 		return w.translateReturnCommand()
+	case C_CALL:
+		return w.translateCallCommand(command.Arg1(), command.Arg2())
 	default:
 		return []string{}, fmt.Errorf("invalid command: %s", command)
 	}
@@ -58,6 +60,72 @@ func (w *Writer) translateFunctionCommand(functionName string, locals int64) ([]
 		count += 1
 	}
 
+	return res, nil
+}
+func (w *Writer) nextNum() int64 {
+	num := w.counter
+	w.counter += 1
+	return num
+}
+
+func pushSymbolContent(symbol string) []string {
+	res := make([]string, 0)
+	res = append(res, fmt.Sprintf("@%s", symbol))
+	res = append(res, "D=M")
+	res = append(res, "@SP")
+	res = append(res, "A=M")
+	res = append(res, "M=D")
+	res = append(res, "@SP")
+	res = append(res, "M=M+1")
+	return res
+}
+
+func (w *Writer) translateCallCommand(functionName string, args int64) ([]string, error) {
+	// call
+	res := make([]string, 0)
+	returnAddress := fmt.Sprintf("returnAddress%d", w.nextNum())
+	// push return Address
+	res = append(res, fmt.Sprintf("@%s", returnAddress))
+	res = append(res, "D=A")
+	res = append(res, "@SP")
+	res = append(res, "A=M")
+	res = append(res, "M=D")
+	res = append(res, "@SP")
+	res = append(res, "M=M+1")
+
+	// push LCL
+	res = append(res, pushSymbolContent("LCL")...)
+
+	// push ARG
+	res = append(res, pushSymbolContent("ARG")...)
+
+	// push THIS
+	res = append(res, pushSymbolContent("THIS")...)
+
+	// push THAT
+	res = append(res, pushSymbolContent("THAT")...)
+
+	// ARG = SP - 5 -nArgs
+	res = append(res, fmt.Sprintf("@%d", args))
+	res = append(res, "D=A")
+	res = append(res, "@5")
+	res = append(res, "D=D+A")
+	res = append(res, "@SP")
+	res = append(res, "D=M-D")
+	res = append(res, "@ARG")
+	res = append(res, "M=D")
+
+	// LCL = SP
+	res = append(res, "@SP")
+	res = append(res, "D=M")
+	res = append(res, "@LCL")
+	res = append(res, "M=D")
+
+	// goto functionName
+	res = append(res, fmt.Sprintf("@%s", functionName))
+	res = append(res, "0;JMP")
+
+	res = append(res, fmt.Sprintf("(%s)", returnAddress))
 	return res, nil
 }
 
@@ -136,7 +204,8 @@ func (w *Writer) translateGotoCommand(label string) ([]string, error) {
 }
 
 func (w *Writer) translateIfCommand(label string) ([]string, error) {
-	// if-goto LOOP        // if n > 0, goto LOOP
+	// TODO: Confirm `if n # 0, goto LOOP` is true??? or `if n == 0` ??
+	// if-goto LOOP        // if n # 0, goto LOOP
 	res := make([]string, 0)
 	l := computeLabelName(label)
 
@@ -144,7 +213,7 @@ func (w *Writer) translateIfCommand(label string) ([]string, error) {
 	res = append(res, "AM=M-1")
 	res = append(res, "D=M")
 	res = append(res, fmt.Sprintf("@%s", l))
-	res = append(res, "D;JGT")
+	res = append(res, "D;JNE")
 
 	return res, nil
 }
