@@ -10,12 +10,15 @@ type Writer struct {
 	fileName string
 }
 
-func NewWriter(fileName string) *Writer {
+func NewWriter(fileName string, counter int64) *Writer {
 	processed := strings.Replace(fileName, ".vm", ".", 1)
 	return &Writer{
-		counter:  int64(0),
+		counter:  counter,
 		fileName: processed,
 	}
+}
+func (w *Writer) Counter() int64 {
+	return w.counter
 }
 
 func (w *Writer) Write(command VmCommand) ([]string, error) {
