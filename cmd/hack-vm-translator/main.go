@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"flag"
 	"fmt"
 	"hack/vm/translator"
@@ -56,11 +57,6 @@ func main() {
 	w := bufio.NewWriter(output)
 	shouldBootstrap := flag.Bool("bootstrap", false, "whether to bootstrap or not")
 	flag.Parse()
-	if shouldBootstrap == nil {
-		fmt.Println("bootstrap is nil")
-	} else {
-		fmt.Println("bootstrap is ", *shouldBootstrap)
-	}
 	if shouldBootstrap != nil && *shouldBootstrap {
 		// TODO: improve it
 		boostrapCmds := []string{
@@ -77,48 +73,112 @@ func main() {
 		}
 	}
 
-	counter := int64(0)
-	for _, inputFilePath := range inputFilePaths {
-		inputFile, err := os.Open(inputFilePath)
+	ctx := context.Background()
+	asmCh := parsePipeline(ctx, inputFilePaths)
+	writerCompleted := writeFilePipeline(ctx, asmCh, w)
+
+	select {
+	case <-ctx.Done():
+		log.Fatal(ctx.Err())
+
+	case <-writerCompleted:
+		err = w.Flush()
 		if err != nil {
 			log.Fatal(err)
 		}
+	}
+}
 
-		parser := translator.NewParser(inputFile)
-		tokens := strings.Split(inputFilePath, "/")
-		writer := translator.NewWriter(tokens[len(tokens)-1], counter)
+type WritePipelineResult struct {
+	counter int64
+}
 
-		for parser.HasMoreCommands() {
-			err = parser.Advance()
-			if err != nil {
-				log.Fatal(err)
-			}
-			cmd := parser.CurrentCommand()
-			asms, err := writer.Write(cmd)
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			// write vm command
-			_, err = w.WriteString(fmt.Sprintf("// %s\n", cmd.String()))
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			// write assembly
-			for _, a := range asms {
-				_, err = w.WriteString(fmt.Sprintln(a))
+func writePipeline(parentCtx context.Context, cmdCh <-chan translator.VmCommand, writerName string, counter int64, asmCh chan<- string) chan WritePipelineResult {
+	ctx, cancel := context.WithCancelCause(parentCtx)
+	writer := translator.NewWriter(writerName, counter)
+	completed := make(chan WritePipelineResult)
+	go func() {
+		for cmd := range cmdCh {
+			select {
+			case <-ctx.Done():
+				return
+			default:
+				asms, err := writer.Write(cmd)
 				if err != nil {
-					log.Fatal(err)
+					cancel(err)
+					return
+				}
+				// write vm comment
+				asmCh <- fmt.Sprintf("// %s\n", cmd.String())
+				// write asm
+				for _, a := range asms {
+					asmCh <- a
 				}
 			}
 		}
-		counter = writer.Counter()
-	}
+		completed <- WritePipelineResult{counter: writer.Counter()}
+	}()
+	return completed
+}
 
-	err = w.Flush()
-	if err != nil {
-		log.Fatal(err)
-	}
+func parsePipeline(parentCtx context.Context, inputFilePaths []string) <-chan string {
+	counter := int64(0)
+	ctx, cancel := context.WithCancelCause(parentCtx)
+	asmCh := make(chan string)
+	go func() {
+		for _, inputFilePath := range inputFilePaths {
+			inputFile, err := os.Open(inputFilePath)
+			if err != nil {
+				cancel(err)
+				return
+			}
 
+			parser := translator.NewParser(inputFile)
+			tokens := strings.Split(inputFilePath, "/")
+			cmdCh := make(chan translator.VmCommand)
+			completed := writePipeline(ctx, cmdCh, tokens[len(tokens)-1], counter, asmCh)
+
+			for parser.HasMoreCommands() {
+				select {
+				case <-ctx.Done():
+					return
+				default:
+					err = parser.Advance()
+					if err != nil {
+						cancel(err)
+						return
+					}
+					cmd := parser.CurrentCommand()
+					cmdCh <- cmd
+				}
+			}
+			close(cmdCh)
+			res := <-completed
+			counter = res.counter
+		}
+		close(asmCh)
+	}()
+	return asmCh
+}
+
+func writeFilePipeline(parentCtx context.Context, asmCh <-chan string, w *bufio.Writer) <-chan struct{} {
+	ctx, cancel := context.WithCancelCause(parentCtx)
+	writerCompleted := make(chan struct{})
+	go func() {
+		for a := range asmCh {
+			select {
+			case <-ctx.Done():
+				return
+
+			default:
+				_, err := w.WriteString(fmt.Sprintln(a))
+				if err != nil {
+					cancel(err)
+					return
+				}
+			}
+		}
+		writerCompleted <- struct{}{}
+	}()
+	return writerCompleted
 }
