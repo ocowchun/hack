@@ -1,0 +1,1 @@
+When parsing element* like (statement* or varName*), I decide to let compileXXX return the result once it meet a token it doesn't know how to deal with 
