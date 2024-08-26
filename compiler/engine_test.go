@@ -2,6 +2,7 @@ package compiler
 
 import (
 	"fmt"
+	"io"
 	"strings"
 	"testing"
 )
@@ -107,10 +108,6 @@ func TestEngine_CompileClass(t *testing.T) {
 		}
 	`
 	engine := NewEngine(strings.NewReader(code))
-	//_, err := engine.tokenizer.Next()
-	//if err != nil {
-	//	t.Fatalf("expect no err but got %s", err)
-	//}
 
 	actual, err := engine.CompileClass()
 	if err != nil {
@@ -475,8 +472,8 @@ func TestEngine_CompileVarDec(t *testing.T) {
 	}
 
 	actual, err := engine.CompileVarDec()
-	if err != nil {
-		t.Fatalf("expect no err but got %s", err)
+	if err == nil || err != io.EOF {
+		t.Fatalf("expect io.EOF err but got %s", err)
 	}
 	expect := VarDec{
 		typee: Type{primitiveClassName: "int"},
@@ -498,8 +495,8 @@ func TestEngine_CompileVarDec(t *testing.T) {
 	}
 
 	actual, err = engine.CompileVarDec()
-	if err != nil {
-		t.Fatalf("expect no err but got %s", err)
+	if err == nil || err != io.EOF {
+		t.Fatalf("expect io.EOF err but got %s", err)
 	}
 	expect = VarDec{
 		typee: Type{primitiveClassName: "int"},
@@ -522,8 +519,8 @@ func TestEngine_CompileVarDec(t *testing.T) {
 	}
 
 	actual, err = engine.CompileVarDec()
-	if err != nil {
-		t.Fatalf("expect no err but got %s", err)
+	if err == nil || err != io.EOF {
+		t.Fatalf("expect io.EOF err but got %s", err)
 	}
 	expect = VarDec{
 		typee: Type{
@@ -632,35 +629,7 @@ func Test_foo(t *testing.T) {
 	// case 3: let i = i * (-j);
 	// it should have 2 var!
 	code := `
-   /** Runs the game: handles the user's inputs and moves the square accordingly */
-   method void run() {
-      var char key;  // the key currently pressed by the user
-      var boolean exit;
-      let exit = false;
-
-      while (~exit) {
-         // waits for a key to be pressed
-         while (key = 0) {
-            let key = Keyboard.keyPressed();
-            do moveSquare();
-         }
-         if (key = 81)  { let exit = true; }     // q key
-         if (key = 90)  { do square.decSize(); } // z key
-         if (key = 88)  { do square.incSize(); } // x key
-         if (key = 131) { let direction = 1; }   // up arrow
-         if (key = 133) { let direction = 2; }   // down arrow
-         if (key = 130) { let direction = 3; }   // left arrow
-         if (key = 132) { let direction = 4; }   // right arrow
-
-         // waits for the key to be released
-         while (~(key = 0)) {
-            let key = Keyboard.keyPressed();
-            do moveSquare();
-         }
-     } // while
-      
-     return;
-   }
+x + g(2,y,-z) * 5
 	`
 	//	code := `
 	//      if (direction = 1) { do square.moveUp(); }
@@ -671,7 +640,8 @@ func Test_foo(t *testing.T) {
 		t.Fatalf("expect no err but got %s", err)
 	}
 
-	actual, err := engine.CompileSubroutineDec()
+	actual, err := engine.CompileExpression()
+
 	//actual, err := engine.CompileIfStatement()
 	if err != nil {
 		t.Fatalf("expect no err but got %s", err)
@@ -700,7 +670,7 @@ func assertExpression(actual *Expression, expect *Expression, t *testing.T) {
 		return
 	}
 	if actual.RightTerm() == nil || expect.RightTerm() == nil {
-		t.Fatalf("expect rightTerm to be %s but got %s", expect.RightTerm(), actual.RightTerm())
+		t.Fatalf("expect term to be %s but got %s", expect.RightTerm(), actual.RightTerm())
 	}
 
 	if actual.Op().String() != expect.Op().String() {
@@ -942,6 +912,43 @@ func TestEngine_CompileExpression(t *testing.T) {
 		rightTerm: &Term{
 			termType:       StringConstantTermType,
 			stringConstant: "world",
+		},
+	}
+	assertExpression(&actual, &expect, t)
+
+	// case 3: term op term op term
+	code = `
+		a + b * c 
+	`
+	engine = NewEngine(strings.NewReader(code))
+	_, err = engine.tokenizer.Next()
+	if err != nil {
+		t.Fatalf("expect no err but got %s", err)
+	}
+
+	actual, err = engine.CompileExpression()
+	if err != nil {
+		t.Fatalf("expect no err but got %s", err)
+	}
+	expect = Expression{
+		leftTerm: &Term{
+			termType: VarNameTermType,
+			varName:  VarName{identifier: Identifier{content: "a"}},
+		},
+		op: PlusOp,
+		rightTerm: &Term{
+			termType: ExpressionTermType,
+			expression: &Expression{
+				leftTerm: &Term{
+					termType: VarNameTermType,
+					varName:  VarName{identifier: Identifier{content: "b"}},
+				},
+				op: MultipleOp,
+				rightTerm: &Term{
+					termType: VarNameTermType,
+					varName:  VarName{identifier: Identifier{content: "c"}},
+				},
+			},
 		},
 	}
 	assertExpression(&actual, &expect, t)

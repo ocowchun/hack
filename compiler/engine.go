@@ -873,7 +873,7 @@ func (engine *Engine) CompileExpressionList() (ExpressionList, error) {
 
 func (engine *Engine) CompileExpression() (Expression, error) {
 	expression := Expression{}
-	// term (op term)
+	// term (op term)*
 	leftTerm, err := engine.CompileTerm()
 	if err != nil {
 		return expression, err
@@ -887,12 +887,14 @@ func (engine *Engine) CompileExpression() (Expression, error) {
 		return expression, err
 	}
 
-	if isOp(token) {
+	ops := make([]Op, 0)
+	terms := []Term{leftTerm}
+	for isOp(token) {
 		op, err := BuildOp(token)
 		if err != nil {
 			return expression, err
 		}
-		expression.op = op
+		ops = append(ops, op)
 
 		_, err = engine.tokenizer.Next()
 		if err == io.EOF {
@@ -901,14 +903,41 @@ func (engine *Engine) CompileExpression() (Expression, error) {
 			return expression, err
 		}
 
-		rightTerm, err := engine.CompileTerm()
+		term, err := engine.CompileTerm()
 		if err != nil {
 			return expression, err
 		}
-		expression.rightTerm = &rightTerm
+		terms = append(terms, term)
+
+		token, err = engine.tokenizer.Current()
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			return expression, err
+		}
 	}
 
-	return expression, nil
+	i := len(ops)
+	if i == 0 {
+		return Expression{
+			leftTerm: &terms[0],
+		}, nil
+	}
+
+	previousTerm := &terms[i]
+	i--
+	for i >= 0 {
+		previousTerm = &Term{
+			termType: ExpressionTermType,
+			expression: &Expression{
+				leftTerm:  &terms[i],
+				op:        ops[i],
+				rightTerm: previousTerm,
+			},
+		}
+		i -= 1
+	}
+	return *previousTerm.expression, nil
 }
 
 func isOp(token Token) bool {
