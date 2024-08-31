@@ -81,10 +81,25 @@ func (t *SymbolTable) Add(name string, symbolType Type, symbolKind SymbolKind) e
 	return nil
 }
 
+type NotFound string
+
+func (n NotFound) Error() string {
+	return fmt.Sprintf("symbol not found: %s", string(n))
+}
+
 func (t *SymbolTable) Get(name string) (Symbol, error) {
 	symbol, exists := t.symbolMap[name]
 	if !exists {
-		return Symbol{}, fmt.Errorf("symbol not found: %s", name)
+		return Symbol{}, NotFound(name)
 	}
 	return symbol, nil
+}
+
+func (t *SymbolTable) Clear() {
+	t.symbolMap = make(map[string]Symbol)
+	t.symbolKindCounts = make(map[SymbolKind]uint32)
+}
+
+func (t *SymbolTable) SymbolCount(kind SymbolKind) uint32 {
+	return t.symbolKindCounts[kind]
 }

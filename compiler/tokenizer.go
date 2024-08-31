@@ -196,7 +196,7 @@ func (t *Tokenizer) Next() (Token, error) {
 			continue
 		}
 		if isMultipleLineComment {
-			if strings.HasPrefix(line, "*/") {
+			if strings.HasSuffix(line, "*/") {
 				isMultipleLineComment = false
 				continue
 			} else if strings.HasPrefix(line, "*") {

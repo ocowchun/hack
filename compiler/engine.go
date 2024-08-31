@@ -1819,7 +1819,8 @@ func (t Term) String() string {
 	case VarNameTermType:
 		return t.varName.Name()
 	case VarNameExpressionTermType:
-		return t.expression.String()
+
+		return fmt.Sprintf("%s[%s]", t.varName, t.expression.String())
 	case SubroutineCallTermType:
 		return t.subroutineCall.String()
 	case ExpressionTermType:
