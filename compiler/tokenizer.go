@@ -218,7 +218,7 @@ func (t *Tokenizer) Next() (Token, error) {
 	i := 0
 	for i < len(buffer) {
 		r := rune(buffer[i])
-		if content == "" {
+		if content == "" && tokenType != StringConstantTokenType {
 			// add anything except space or tab
 			if !isSpace(r) {
 				if isDigit(r) {

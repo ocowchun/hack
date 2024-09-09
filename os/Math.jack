@@ -1,0 +1,230 @@
+class Math {
+    static int INT_MAX;
+    static Array TWO_TO;
+    function void init() {
+        let INT_MAX = 32767;
+        let TWO_TO = Array.new(16);
+        let TWO_TO[0] = 1;
+        let TWO_TO[1] = TWO_TO[0] + TWO_TO[0] ;
+        let TWO_TO[2] = TWO_TO[1] + TWO_TO[1] ;
+        let TWO_TO[3] = TWO_TO[2] + TWO_TO[2] ;
+        let TWO_TO[4] = TWO_TO[3] + TWO_TO[3] ;
+        let TWO_TO[5] = TWO_TO[4] + TWO_TO[4] ;
+        let TWO_TO[6] = TWO_TO[5] + TWO_TO[5] ;
+        let TWO_TO[7] = TWO_TO[6] + TWO_TO[6] ;
+        let TWO_TO[8] = TWO_TO[7] + TWO_TO[7] ;
+        let TWO_TO[9] = TWO_TO[8] + TWO_TO[8] ;
+        let TWO_TO[10] = TWO_TO[9] + TWO_TO[9] ;
+        let TWO_TO[11] = TWO_TO[10] + TWO_TO[10] ;
+        let TWO_TO[12] = TWO_TO[11] + TWO_TO[11] ;
+        let TWO_TO[13] = TWO_TO[12] + TWO_TO[12] ;
+        let TWO_TO[14] = TWO_TO[13] + TWO_TO[13] ;
+        let TWO_TO[15] = TWO_TO[14] + TWO_TO[14] ;
+        return;
+    }
+
+    function int abs(int x) {
+        if (x > 0) {
+            return x;
+        }
+        if (x = 0) {
+            return x;
+        }
+
+        return INT_MAX - (INT_MAX + x);
+    }
+
+    function int mod(int x, int y) {
+        if (x < y) {
+            return x;
+        }
+
+        return x - ((x / y) * y);
+    }
+
+    function int twoTo(int x) {
+        return TWO_TO[x];
+    }
+
+
+
+    function int bit(int x, int i) {
+        var int remaining;
+        var int j;
+
+        if (i > 15) {
+            return 0;
+        }
+        if (x = 0) {
+            return 0;
+        }
+        if (x == -1) {
+            return 1;
+        }
+
+        let remaining = x;
+        if (x < 0) {
+            if (i = 15) {
+                return 1;
+            }
+
+            let remaining = remaining + TWO_TO[15];
+        }
+
+        if (remaining < TWO_TO[i]) {
+            return 0;
+        }
+        if (remaining = TWO_TO[i]) {
+            return 1;
+        }
+
+        if (i = 15) {
+            return 0;
+        }
+
+        let j = 14;
+
+        while (j > i) {
+            if (remaining > TWO_TO[j]) {
+                let remaining = remaining - TWO_TO[j];
+            }  else {
+                if (remaining = TWO_TO[j]) {
+                    let remaining = remaining - TWO_TO[j];
+                }
+            }
+            let j = j - 1;
+        }
+
+        if (remaining < TWO_TO[j]) {
+            return 0;
+        }
+        return 1;
+    }
+
+    function int multiply(int x, int y) {
+        var int i;
+        var int res;
+        var int shiftedX;
+        var int absY;
+
+        if (x = 0) {
+            return 0;
+        }
+        if (y = 0) {
+            return 0;
+        }
+
+        let shiftedX = Math.abs(x);
+        let absY = Math.abs(y);
+        let i = 0;
+        while (i < absY) {
+            let res = res + shiftedX;
+            let i = i + 1;
+        }
+
+
+
+        if (x < 0) {
+            if (y > 0) {
+                return -res;
+            }
+        } else {
+            if (y < 0) {
+                return -res;
+            }
+        }
+
+        return res;
+    }
+
+
+
+    function int divide(int x, int y) {
+        var int absX;
+        var int absY;
+        var int q;
+        var int sign;
+
+        if (y = x) {
+            return 1;
+        }
+        if (y < 0) {
+            return 0;
+        }
+        if (x = 0) {
+            return 0;
+        }
+        if (y = 0) {
+            return 0;
+        }
+
+        let absX = Math.abs(x);
+        let absY = Math.abs(y);
+        if (absY > absX) {
+            return 0;
+        }
+
+        let sign = 1;
+        if (x > 0) {
+            if (y < 0) {
+                let sign = -1;
+            }
+        } else {
+            if (y > 0) {
+                let sign = -1;
+            }
+        }
+
+        let q = Math.divide(absX, absY + absY);
+
+        if ((absX - Math.multiply(q, absY + absY)) < absY) {
+            return Math.multiply(q + q, sign);
+        } else {
+            return Math.multiply(q + q + 1, sign);
+        }
+    }
+
+    function int min(int x, int y) {
+        if (x > y) {
+            return y;
+        }
+        return x;
+    }
+
+    function int max(int x, int y) {
+        if (x > y) {
+            return x;
+        }
+        return y;
+    }
+
+    function int sqrt(int x) {
+        var int y;
+        var int i; 
+        var int n;
+
+        if (x < 1) {
+            return 0;
+        }
+
+        let y = 0;
+        let i = 7;
+        
+
+        while (i > -1) {
+            let n = y + TWO_TO[i];
+            if (n < 182) {
+                if (x  > Math.multiply(n, n)) {
+                    let y = n;
+                } else  {
+                    if (x = Math.multiply(n,n)) {
+                        let y = n;
+                    }
+                }
+            }
+            let i = i - 1;
+        }
+
+        return y;
+    }
+}

@@ -67,7 +67,7 @@ func TestTokenizer_Next_case2(t *testing.T) {
 		}
 
 		if expected != actual {
-			t.Fatalf("expected %s, but got error: %s", expected, err)
+			t.Fatalf("expected %s, but got : %s", expected, actual)
 		}
 	}
 
@@ -91,7 +91,7 @@ func TestTokenizer_Next_case3(t *testing.T) {
 		}
 
 		if expected != actual {
-			t.Fatalf("expected %s, but got error: %s", expected, err)
+			t.Fatalf("expected %s, but got : %s", expected, actual)
 		}
 	}
 
@@ -114,7 +114,7 @@ func TestTokenizer_Next_case4(t *testing.T) {
 		}
 
 		if expected != actual {
-			t.Fatalf("expected %s, but got error: %s", expected, err)
+			t.Fatalf("expected %s, but got : %s", expected, actual)
 		}
 	}
 
@@ -137,7 +137,7 @@ func TestTokenizer_Next_case5(t *testing.T) {
 		}
 
 		if expected != actual {
-			t.Fatalf("expected %s, but got error: %s", expected, err)
+			t.Fatalf("expected %s, but got : %s", expected, actual)
 		}
 	}
 
@@ -161,7 +161,7 @@ func TestTokenizer_Next_case6(t *testing.T) {
 		}
 
 		if expected != actual {
-			t.Fatalf("expected %s, but got error: %s", expected, err)
+			t.Fatalf("expected %s, but got : %s", expected, actual)
 		}
 	}
 
@@ -185,7 +185,7 @@ func TestTokenizer_Next_case7(t *testing.T) {
 		}
 
 		if expected != actual {
-			t.Fatalf("expected %s, but got error: %s", expected, err)
+			t.Fatalf("expected %s, but got : %s", expected, actual)
 		}
 	}
 
@@ -215,7 +215,40 @@ func TestTokenizer_Next_case8(t *testing.T) {
 		}
 
 		if expected != actual {
+			t.Fatalf("expected %s, but got : %s", expected, actual)
+		}
+	}
+
+	_, err := tokenizer.Next()
+	if err != io.EOF {
+		t.Fatalf("expected io.EOF, but got: %s", err)
+	}
+}
+
+func TestTokenizer_Next_case9(t *testing.T) {
+	code := `
+do Output.printString("(Verify echo and usage of 'backspace')");
+	`
+	reader := strings.NewReader(code)
+	tokenizer := NewTokenizer(reader)
+
+	for _, expected := range []Token{
+		{content: "do", tokenType: KeywordTokenType},
+		{content: "Output", tokenType: IdentifierTokenType},
+		{content: ".", tokenType: SymbolTokenType},
+		{content: "printString", tokenType: IdentifierTokenType},
+		{content: "(", tokenType: SymbolTokenType},
+		{content: "(Verify echo and usage of 'backspace')", tokenType: StringConstantTokenType},
+		{content: ")", tokenType: SymbolTokenType},
+		{content: ";", tokenType: SymbolTokenType},
+	} {
+		actual, err := tokenizer.Next()
+		if err != nil {
 			t.Fatalf("expected %s, but got error: %s", expected, err)
+		}
+
+		if expected != actual {
+			t.Fatalf("expected %s, but got : %s", expected, actual)
 		}
 	}
 
