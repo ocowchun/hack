@@ -10,7 +10,7 @@
 class Memory {
     static Array ram;
     static Array heap;
-
+    // TODO: fix this file and Screen.jack to run Pong correctly
     /** Initializes the class. */
     function void init() {
         let ram = 0;
